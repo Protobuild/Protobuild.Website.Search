@@ -19,7 +19,7 @@ class MainPage(webapp2.RequestHandler):
 
 class ReindexPackage(webapp2.RequestHandler):
     def get(self, package_id):
-        self.response.headers['Content-Type'] = 'text/plain'
+        self.response.headers['Content-Type'] = 'application/json'
 
         package_key = ndb.Key("package", int(package_id))
         package = package_key.get()
