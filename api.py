@@ -53,6 +53,7 @@ class ReindexPackage(webapp2.RequestHandler):
 class SearchPackage(webapp2.RequestHandler):
     def get(self, query):
         self.response.headers['Content-Type'] = 'application/json'
+        self.response.headers['Access-Control-Allow-Origin'] = '*'
 
         index = search.Index(name='names-and-descriptions')
         try:
