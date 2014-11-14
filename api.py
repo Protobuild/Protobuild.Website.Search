@@ -1,6 +1,7 @@
 import webapp2
 from google.appengine.ext import ndb
 from google.appengine.api import search
+import json
 
 class package(ndb.Model):
     name = ndb.StringProperty(required=True);
@@ -19,7 +20,7 @@ class ReindexPackage(webapp2.RequestHandler):
         package = package_key.get()
 
         if package == None:
-            self.response.write("No such package")
+            self.response.write(json.dumps({"error": True, "message": "No such package"}))
             return
 
         index = search.Index(name='names-and-descriptions')
@@ -33,9 +34,9 @@ class ReindexPackage(webapp2.RequestHandler):
 
         try:
             index.put(document)
-            self.response.write("Package re-indexed successfully")
+            self.response.write(json.dumps({"error": False, "message": "Package re-indexed successfully"}))
         except search.Error:
-            self.response.write("Package failed to be indexed")
+            self.response.write(json.dumps({"error": True, "message": "Package failed to be indexed"}))
 
 class SearchPackage(webapp2.RequestHandler):
     def get(self, query):
@@ -45,13 +46,21 @@ class SearchPackage(webapp2.RequestHandler):
         try:
             search_query = search.Query(query_string=query)
             search_results = index.search(search_query)
-            self.response.write('{"error": false, "results": []}')
+
+            formatted_results = list()
+            for doc in search_results:
+                info = {"id": int(doc.doc_id)}
+                for field in doc.fields:
+                    info[field.name] = field.value
+                formatted_results.append(info)
+
+            self.response.write(json.dumps({"error": False, "results": formatted_results}))
         except search.Error:
-            self.response.write('{"error": true, "results": []}')
+            self.response.write(json.dumps({"error": True, "results": list()}))
 
 application = webapp2.WSGIApplication([
     ('/', MainPage),
     ('/reindex/([0-9]+)', ReindexPackage),
     ('/search/(.+)', SearchPackage),
-], debug=True)
+])
 
