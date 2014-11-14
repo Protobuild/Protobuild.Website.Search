@@ -24,14 +24,14 @@ class ReindexPackage(webapp2.RequestHandler):
         package_key = ndb.Key("package", int(package_id))
         package = package_key.get()
 
+        if package == None:
+            self.response.write(json.dumps({"error": True, "message": "No such package"}))
+            return
+
         owner = user.gql("WHERE googleID = :id", id=package.googleID).get()
 
         if owner == None:
             self.response.write(json.dumps({"error": True, "message": "Package has no valid owner"}))
-            return
-
-        if package == None:
-            self.response.write(json.dumps({"error": True, "message": "No such package"}))
             return
 
         index = search.Index(name='names-and-descriptions')
@@ -49,6 +49,25 @@ class ReindexPackage(webapp2.RequestHandler):
             self.response.write(json.dumps({"error": False, "message": "Package re-indexed successfully"}))
         except search.Error:
             self.response.write(json.dumps({"error": True, "message": "Package failed to be indexed"}))
+
+class RemovePackage(webapp2.RequestHandler):
+    def get(self, package_id):
+        self.response.headers['Content-Type'] = 'application/json'
+
+        package_key = ndb.Key("package", int(package_id))
+        package = package_key.get()
+
+        if package != None:
+            self.response.write(json.dumps({"error": True, "message": "Package still exists"}))
+            return
+
+        index = search.Index(name='names-and-descriptions')
+
+        try:
+            index.delete([str(package_id)])
+            self.response.write(json.dumps({"error": False, "message": "Package removed from full text search successfully"}))
+        except search.Error:
+            self.response.write(json.dumps({"error": True, "message": "Package failed to be removed"}))
 
 class SearchPackage(webapp2.RequestHandler):
     def get(self, query):
@@ -74,6 +93,7 @@ class SearchPackage(webapp2.RequestHandler):
 application = webapp2.WSGIApplication([
     ('/', MainPage),
     ('/reindex/([0-9]+)', ReindexPackage),
+    ('/remove/([0-9]+)', RemovePackage),
     ('/search/(.+)', SearchPackage),
 ])
 
