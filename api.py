@@ -6,6 +6,11 @@ import json
 class package(ndb.Model):
     name = ndb.StringProperty(required=True);
     description = ndb.StringProperty(required=True);
+    googleID = ndb.StringProperty(required=True);
+
+class user(ndb.Model):
+    canonicalName = ndb.StringProperty(required=True);
+    googleID = ndb.StringProperty(required=True);
 
 class MainPage(webapp2.RequestHandler):
     def get(self):
@@ -19,6 +24,12 @@ class ReindexPackage(webapp2.RequestHandler):
         package_key = ndb.Key("package", int(package_id))
         package = package_key.get()
 
+        owner = user.gql("WHERE googleID = :id", id=package.googleID).get()
+
+        if owner == None:
+            self.response.write(json.dumps({"error": True, "message": "Package has no valid owner"}))
+            return
+
         if package == None:
             self.response.write(json.dumps({"error": True, "message": "No such package"}))
             return
@@ -28,6 +39,7 @@ class ReindexPackage(webapp2.RequestHandler):
         fields = [
             search.TextField(name='name', value=package.name),
             search.TextField(name='description', value=package.description),
+            search.AtomField(name='ownerName', value=owner.canonicalName),
         ]
 
         document = search.Document(doc_id=str(package_id), fields=fields)
