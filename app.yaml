@@ -1,5 +1,5 @@
 application: protobuild-index
-version: 1
+version: api
 runtime: python27
 api_version: 1
 threadsafe: true
